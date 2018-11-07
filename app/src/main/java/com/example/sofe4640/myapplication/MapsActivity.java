@@ -1,21 +1,34 @@
 package com.example.sofe4640.myapplication;
 
+import android.location.Address;
+import android.location.Criteria;
+import android.location.Geocoder;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.Toast;
 
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Locale;
 
 public class MapsActivity extends FragmentActivity implements OnMapReadyCallback {
 
     private GoogleMap mMap;
+    ArrayList<LatLng> listPoints;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,6 +38,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
+        listPoints = new ArrayList<LatLng>();
     }
 
 
@@ -45,14 +59,68 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         LatLng sydney = new LatLng(-34, 151);
         mMap.addMarker(new MarkerOptions().position(sydney).title("Marker in Sydney"));
         mMap.moveCamera(CameraUpdateFactory.newLatLng(sydney));
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+
+        mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+            @Override
+            public void onMapLongClick(LatLng latLng) {
+
+                        if (listPoints.size()>1){
+                            listPoints.clear();
+                            mMap.clear();
+                        }else{
+                            listPoints.add(latLng);
+                            mMap.addMarker(new MarkerOptions().position(latLng).title(""));
+                            double x= latLng.longitude;
+                            double y= latLng.latitude;
+
+                            //todo  show the address of the click
+                            // Address newAddress = new Address(new LatLng(x,y));
+                            //newAddress.getCountryCode();
+
+
+                        }
+            }
+        });
+
     }
 
-    public void getLocation(View v){
+    public void getLocation(View v) throws IOException {
         hideSoftKeyboard(v);
         EditText et = (EditText)findViewById(R.id.txtAddress);
+        String inputAddress = et.getText().toString();
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+
+        Geocoder gc= new Geocoder(this);
+        List<Address> address = gc.getFromLocationName(inputAddress,1);
+        Address add = address.get(0);
+        double lat = add.getLatitude();
+        double log = add.getLongitude();
+
+        if (lat!=0 && log !=0) {
+            Toast.makeText(this,"Address Found"+ lat + " " + log,Toast.LENGTH_LONG).show();
+
+            gotoLocation(lat,log);
+        }
+            else
+            Toast.makeText(this,"Address not Found",Toast.LENGTH_LONG).show();
 
 
     }
+
+    private void gotoLocation(double lat, double log) {
+        CameraPosition cameraPosition = new CameraPosition.Builder()
+                .tilt(40)
+                .target(new LatLng(lat,log))
+                .bearing(90)
+                .zoom(17)
+                .build();
+
+        mMap.animateCamera(CameraUpdateFactory.newCameraPosition(cameraPosition));
+        //add a marker
+        mMap.addMarker(new MarkerOptions().position(new LatLng(lat,log))); //
+    }
+
 
     private void hideSoftKeyboard(View v) {
         InputMethodManager imm = (InputMethodManager)getSystemService(INPUT_METHOD_SERVICE);
